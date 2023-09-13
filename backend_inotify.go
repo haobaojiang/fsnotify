@@ -448,6 +448,12 @@ func (w *Watcher) WatchList() []string {
 	return entries
 }
 
+type renamePair struct{
+	Cookie uint32
+	From string
+}
+
+
 // readEvents reads from the inotify file descriptor, converts the
 // received events into Event objects and sends them via the Events channel
 func (w *Watcher) readEvents() {
@@ -457,10 +463,16 @@ func (w *Watcher) readEvents() {
 		close(w.Events)
 	}()
 
+
+
+
 	var (
 		buf   [unix.SizeofInotifyEvent * 4096]byte // Buffer for a maximum of 4096 raw events
 		errno error                                // Syscall errno
 	)
+
+	pairs:=make(map[uint32]renamePair)
+
 	for {
 		// See if we have been closed.
 		if w.isClosed() {
@@ -545,6 +557,20 @@ func (w *Watcher) readEvents() {
 			}
 
 			event := w.newEvent(name, mask)
+
+			if event.Has(Rename){
+				pairs[raw.Cookie]=renamePair{
+					Cookie:raw.Cookie,
+					From:event.Name,
+				}
+			}
+			if event.Has(RenameTo){
+                 pair,ok:=pairs[raw.Cookie]
+				if ok{
+					event.OldName = pair.From
+					delete(pairs,raw.Cookie)
+				}
+			}
 
 			// Send the events that are not ignored on the events channel
 			if mask&unix.IN_IGNORED == 0 {
