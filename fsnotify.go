@@ -18,6 +18,10 @@ import (
 
 // Event represents a file system notification.
 type Event struct {
+
+	// path to the rename source
+	OldName string
+
 	// Path to the file or directory.
 	//
 	// Paths are relative to the input; for example with Add("dir") the Name
