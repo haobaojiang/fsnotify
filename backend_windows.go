@@ -165,11 +165,22 @@ func (w *Watcher) isClosed() bool {
 	return w.closed
 }
 
+func (w *Watcher) sendRenameEvent(oldName string, newName string) {
+	e := Event{}
+	e.Op = RenameTo
+	e.OldName = oldName
+	e.Name = newName
+	select {
+	case ch := <-w.quit:
+		w.quit <- ch
+	case w.Events <- e:
+	}
+}
+
 func (w *Watcher) sendEvent(name string, mask uint64) bool {
 	if mask == 0 {
 		return false
 	}
-
 	event := w.newEvent(name, uint32(mask))
 	select {
 	case ch := <-w.quit:
@@ -350,8 +361,11 @@ const (
 
 func (w *Watcher) newEvent(name string, mask uint32) Event {
 	e := Event{Name: name}
-	if mask&sysFSCREATE == sysFSCREATE || mask&sysFSMOVEDTO == sysFSMOVEDTO {
+	if mask&sysFSCREATE == sysFSCREATE {
 		e.Op |= Create
+	}
+	if mask&sysFSMOVEDTO == sysFSMOVEDTO {
+		e.Op |= RenameTo
 	}
 	if mask&sysFSDELETE == sysFSDELETE || mask&sysFSDELETESELF == sysFSDELETESELF {
 		e.Op |= Remove
@@ -757,10 +771,11 @@ func (w *Watcher) readEvents() {
 				delete(watch.names, name)
 			}
 
-			w.sendEvent(fullname, watch.mask&w.toFSnotifyFlags(raw.Action))
 			if raw.Action == windows.FILE_ACTION_RENAMED_NEW_NAME {
-				fullname = filepath.Join(watch.path, watch.rename)
-				sendNameEvent()
+				oldName := filepath.Join(watch.path, watch.rename)
+				w.sendRenameEvent(oldName, fullname)
+			} else {
+				w.sendEvent(fullname, watch.mask&w.toFSnotifyFlags(raw.Action))
 			}
 
 			// Move to the next event in the buffer
