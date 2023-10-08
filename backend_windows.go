@@ -352,6 +352,7 @@ const (
 	sysFSDELETE     = 0x200
 	sysFSDELETESELF = 0x400
 	sysFSMODIFY     = 0x2
+	sysFSATTRIB     = 0x4
 	sysFSMOVE       = 0xc0
 	sysFSMOVEDFROM  = 0x40
 	sysFSMOVEDTO    = 0x80
@@ -806,6 +807,9 @@ func (w *Watcher) toWindowsFlags(mask uint64) uint32 {
 	}
 	if mask&(sysFSMOVE|sysFSCREATE|sysFSDELETE) != 0 {
 		m |= windows.FILE_NOTIFY_CHANGE_FILE_NAME | windows.FILE_NOTIFY_CHANGE_DIR_NAME
+	}
+	if mask&sysFSATTRIB != 0 {
+		m |= windows.FILE_NOTIFY_CHANGE_ATTRIBUTES
 	}
 	return m
 }
