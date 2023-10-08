@@ -287,6 +287,24 @@ func (w *Watcher) AddWith(name string, opts ...addOpt) error {
 	return <-in.reply
 }
 
+func (w *Watcher) AddFileAttrWatch(name string) error {
+	if w.isClosed() {
+		return ErrClosed
+	}
+	in := &input{
+		op:      opAddWatch,
+		path:    filepath.Clean(name),
+		flags:   sysFSATTRIB,
+		reply:   make(chan error),
+		bufsize: defaultOpts.bufsize,
+	}
+	w.input <- in
+	if err := w.wakeupReader(); err != nil {
+		return err
+	}
+	return <-in.reply
+}
+
 // Remove stops monitoring the path for changes.
 //
 // If the path was added as a recursive watch (e.g. as "/tmp/dir/...") then the

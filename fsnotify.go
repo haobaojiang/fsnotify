@@ -65,7 +65,6 @@ const (
 	// indexing on macOS, anti-virus software, backup software, etc.
 	Chmod
 
-
 	//
 	RenameTo
 )
@@ -94,7 +93,7 @@ func (o Op) String() string {
 	if o.Has(Chmod) {
 		b.WriteString("|CHMOD")
 	}
-	if o.Has(RenameTo){
+	if o.Has(RenameTo) {
 		b.WriteString("|RENAME_TO")
 	}
 	if b.Len() == 0 {
