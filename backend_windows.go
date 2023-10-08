@@ -294,7 +294,7 @@ func (w *Watcher) AddFileAttrWatch(name string) error {
 	in := &input{
 		op:      opAddWatch,
 		path:    filepath.Clean(name),
-		flags:   sysFSATTRIB,
+		flags:   sysFSMODIFY,
 		reply:   make(chan error),
 		bufsize: defaultOpts.bufsize,
 	}
@@ -370,7 +370,6 @@ const (
 	sysFSDELETE     = 0x200
 	sysFSDELETESELF = 0x400
 	sysFSMODIFY     = 0x2
-	sysFSATTRIB     = 0x4
 	sysFSMOVE       = 0xc0
 	sysFSMOVEDFROM  = 0x40
 	sysFSMOVEDTO    = 0x80
@@ -820,14 +819,16 @@ func (w *Watcher) readEvents() {
 
 func (w *Watcher) toWindowsFlags(mask uint64) uint32 {
 	var m uint32
+	// the mask is sysFSALLEVENTS by default, if equal to sysFSMODIFY then we only want to watch for attribute changes
+	if mask == sysFSMODIFY {
+		m |= windows.FILE_NOTIFY_CHANGE_ATTRIBUTES
+		return m
+	}
 	if mask&sysFSMODIFY != 0 {
 		m |= windows.FILE_NOTIFY_CHANGE_LAST_WRITE
 	}
 	if mask&(sysFSMOVE|sysFSCREATE|sysFSDELETE) != 0 {
 		m |= windows.FILE_NOTIFY_CHANGE_FILE_NAME | windows.FILE_NOTIFY_CHANGE_DIR_NAME
-	}
-	if mask&sysFSATTRIB != 0 {
-		m |= windows.FILE_NOTIFY_CHANGE_ATTRIBUTES
 	}
 	return m
 }
